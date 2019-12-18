@@ -33,6 +33,13 @@ module.exports = function (app, db) {
         //ex return: {"stockData":{"stock":"GOOG","price":1354.71,"likes":1}}
         resp.on('end', () => {
           console.log(JSON.parse(data));
+          if (JSON.parse(data) == "Unknown symbol"){
+            console.log("we got an unkown!!")
+          }
+          if (req.query.like){
+            //Gotta do the whole database stuff here
+            console.log("we gotta like")
+          }
           res.send(data)
         });
 
