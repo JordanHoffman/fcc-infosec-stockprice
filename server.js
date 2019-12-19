@@ -28,6 +28,7 @@ MongoClient.connect(process.env.DATABASE, {useUnifiedTopology:true}, (err, clien
   } else 
   {
     var db = client.db('AdvNodeExpressDBChallenges')
+    // console.log(db)
     console.log('Successful database connection');
     //Index page (static HTML)
     app.route('/')
@@ -36,7 +37,7 @@ MongoClient.connect(process.env.DATABASE, {useUnifiedTopology:true}, (err, clien
       });
 
     //For FCC testing purposes
-    fccTestingRoutes(app, db);
+    fccTestingRoutes(app);
 
     app.use(function(req, res, next) {
       console.log(req.originalUrl);
@@ -44,7 +45,7 @@ MongoClient.connect(process.env.DATABASE, {useUnifiedTopology:true}, (err, clien
     })
 
     //Routing for API 
-    apiRoutes(app);  
+    apiRoutes(app, db);  
 
     //404 Not Found Middleware
     app.use(function(req, res, next) {
