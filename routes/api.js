@@ -2,7 +2,7 @@
 *
 *
 *       Complete the API routing below
-*
+*       TODO: handle what's returned for a liked stock for when a like with that IP already exists and for when it doesn't. Handle what's returned for an unliked stock.
 *
 */
 
@@ -11,6 +11,7 @@
 const https = require('https');
 var expect = require('chai').expect;
 var MongoClient = require('mongodb');
+var ObjectID = require('mongodb').ObjectID
 
 module.exports = function (app, db) {
 
@@ -35,7 +36,7 @@ module.exports = function (app, db) {
         resp.on('end', () => {
           // console.log(JSON.parse(data));
           if (JSON.parse(data) == "Unknown symbol"){ //stock name is not a real-world stock
-            console.log("we got an unkown!!")
+            res.send(JSON.parse(data))
           }
           else //stock name is a real-world stock, check if it was liked to see if db stuff needs to be done
           { 
@@ -45,40 +46,49 @@ module.exports = function (app, db) {
               db.collection('stocks').findOne({name:requestedStock}, (error, result)=>{
                 if (error){
                   console.log("error finding db stock: " + error)
-                } else {
+                  res.send("error finding db stock: " + error)
+                } 
+                else 
+                {
+                  var ip = req.header('x-forwarded-for') || req.connection.remoteAddress
+                  console.log("here's our ip: " + ip)
+                  ip = ip.split(',')[0]
                   //returns null if collection doesn't exist or no stock doc found in db, in which case we add
                   if (result == null)
                   {
-                    var ip = req.header('x-forwarded-for') || req.connection.remoteAddress
-                    // console.log(ip)
-                    ip = ip.split(',')[0]
-                    db.collection('stocks').insertOne
-                    (
-                      {
-                        name: requestedStock,
-                        likes: [ip]
-                      },
-                      (error, doc)=>
-                      {
-                        if (error){
-                          console.log("error inserting new stock in db: " + error)
-                        } else {
-                          console.log("succesfully inserted new stock into db! " + doc.ops[0])
-                          //doc object will be returned here. I don't think I have to do anything with it though
-                        }
+                    db.collection('stocks').insertOne({name: requestedStock, likes: [ip]}, (error, doc)=>
+                    {
+                      if (error){
+                        res.send("error inserting new stock in db: " + error)
+                      } else {
+                        console.log("succesfully inserted new stock into db! " + doc.ops[0])
+                        var returnObject = {"stock": doc.ops[0].name, "price": JSON.parse(data).latestPrice, "like":1 }
+                        res.send(returnObject)
                       }
-                    )
+                    })
                   }
-                  //The stock doc exists in the db. I need to see if the IP is listed in the "likes" array. It it is, do nothing, otherwise add the IP to the array and update the document.
+                  //The stock doc exists in the db. I need to see if the IP is listed in the "likes" array. If it is, do nothing, otherwise add the IP to the array and update the document.
                   else { 
-                    
+                    console.log(result)
+                    if (result.likes.includes(ip)){
+                      console.log("ip found")
+                    } else {
+                      console.log("ip not found")
+                      db.collection("stocks").updateOne({_id:ObjectID(result._id)}, {$set: {likes: result.likes.concat([ip])}},
+                      (error, result)=>{
+                        if (error) console.log("error updating db: " + error) 
+                        else {
+                          console.log("succesfully updated db")
+                        }
+                      })
+                    }
                   }
                   
                 }
               })
-            }          }
+            }          
+          }
 
-                    res.send(data)
         });
 
       }).on("error", (err) => {
