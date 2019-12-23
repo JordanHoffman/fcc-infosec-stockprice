@@ -15,10 +15,71 @@ var ObjectID = require('mongodb').ObjectID
 
 module.exports = function (app, db) 
 {
-  //GOAL: the only purpose of the external website is to get the stock price and verify if its name exists. I need to setup a db which holds stock names, their likes, and the IP address of each like (so like will probably be an object) and likes will be an array of 'like' objects. If a person finds a stock and also likes it, I must check if that name is in the db: if not then add it with the like. If it is already in, then check if the 'like' for that IP exists and if not then add it. Be careful Bordan!!! Make backups b/c this stuff is screwy.
+  //GOAL: the only purpose of the external website is to get the stock price and verify if its name exists. I need to setup a db which holds stock names, their likes, and the IP address of each like (so like will probably be an object) and likes will be an array of IP addresses. If a person finds a stock and also likes it, I must check if that name is in the db: if not then add it with the like. If it is already in, then check if the 'like' for that IP exists and if not then add it.
+  //Part deau: The second form also submits to the .get. The only difference is that since it has 2 stocks, they come as an array instead of a string. Check for this and handle accordingly... I gotta freakin refactor stuff into methods to work for both cases. This stuff is begging for promises.
+  
+let httpsPromise = (fullURI) =>{
+  return new Promise((resolve, reject) =>{
+    https.get(fullURI, (resp) => 
+    {
+      let data = '';
+      // A chunk of data has been recieved.
+      resp.on('data', (chunk) => {
+        data += chunk;
+      });
+      // The whole response has been received.
+      //ex return: {"stockData":{"stock":"GOOG","price":1354.71,"likes":1}}
+      resp.on('end', () => {
+        resolve(data)
+      })
+    }).on("error", (err) => {
+      reject(err);
+    });
+  })
+  
+}
+
 app.route('/api/stock-prices')
   .get(function (req, res)
   {
+    //2 stocks submitted from second form
+    if (Array.isArray(req.query.stock))
+    {
+      let requestedStock1 = ("" + req.query.stock[0]).toUpperCase()
+      let requestedStock2 = ("" + req.query.stock[1]).toUpperCase()
+      var fullURI1 = "https://repeated-alpaca.glitch.me/v1/stock/" + requestedStock1 + "/quote"
+      var fullURI2 = "https://repeated-alpaca.glitch.me/v1/stock/" + requestedStock2 + "/quote"
+      Promise.all([httpsPromise(fullURI1), httpsPromise(fullURI2)]).then(
+        result => {
+          //this result will be an array of the 2 stock infos
+          console.log("yay promise worked: " + result)
+          return
+        },
+        error => {
+          console.log(error)
+          return
+        }
+      )  
+    }
+    //1 stock submitted from first form
+    else 
+    {
+      let requestedStock = ("" + req.query.stock).toUpperCase()
+      var fullURI = "https://repeated-alpaca.glitch.me/v1/stock/" + requestedStock + "/quote"
+      httpsPromise(fullURI).then(
+        result => {
+          console.log("yay promise worked: " + result)
+          return
+        },
+        error => {
+          console.log(error)
+          return
+        }
+      )
+    }
+
+  
+    //REFACTORING TO BE DONE HERE
     let requestedStock = ("" + req.query.stock).toUpperCase()
     // console.log(requestedStock)
     var fullURI = "https://repeated-alpaca.glitch.me/v1/stock/" + requestedStock + "/quote"
