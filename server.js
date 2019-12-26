@@ -39,10 +39,10 @@ MongoClient.connect(process.env.DATABASE, {useUnifiedTopology:true}, (err, clien
     //For FCC testing purposes
     fccTestingRoutes(app);
 
-    app.use(function(req, res, next) {
-      console.log(req.originalUrl);
-      next();
-    })
+    // app.use(function(req, res, next) {
+    //   console.log(req.originalUrl);
+    //   next();
+    // })
 
     //Routing for API 
     apiRoutes(app, db);  
