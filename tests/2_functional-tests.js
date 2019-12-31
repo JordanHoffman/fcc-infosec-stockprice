@@ -14,6 +14,7 @@ var server = require('../server');
 chai.use(chaiHttp);
 
 suite('Functional Tests', function() {
+  let likes = 0;
     
     suite('GET /api/stock-prices => stockData object', function() {
       
@@ -22,27 +23,83 @@ suite('Functional Tests', function() {
         .get('/api/stock-prices')
         .query({stock: 'goog'})
         .end(function(err, res){
-          
-          //complete this one too
-          
+           if (err) assert.fail(err)
+           else{
+             assert.property(res.body, 'stockData')
+             assert.property(res.body.stockData, 'stock')
+             assert.property(res.body.stockData, 'price')
+             assert.property(res.body.stockData, 'likes')
+           }
           done();
         });
       });
       
       test('1 stock with like', function(done) {
-        
+       chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog', like: 'true'})
+        .end(function(err, res){
+           if (err) assert.fail(err)
+           else{
+             assert.property(res.body, 'stockData')
+             assert.property(res.body.stockData, 'stock')
+             assert.property(res.body.stockData, 'price')
+             assert.property(res.body.stockData, 'likes')
+             likes = res.body.stockData.likes
+           }
+          done();
+        });
       });
       
       test('1 stock with like again (ensure likes arent double counted)', function(done) {
-        
+       chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: 'goog', like: 'true'})
+        .end(function(err, res){
+           if (err) assert.fail(err)
+           else{
+             assert.equal(res.body.stockData.likes, likes, "likes aren't double counted")
+           }
+          done();
+        });      
       });
       
       test('2 stocks', function(done) {
-        
+       chai.request(server)
+        .get('/api/stock-prices')
+        .query({stock: ['goog','msft']})
+        .end(function(err, res){
+           if (err) assert.fail(err)
+           else{
+             assert.property(res.body, 'stockData')
+             assert.isArray(res.body.stockData)
+             res.body.stockData.forEach( stock =>{
+               assert.property(stock, 'stock')
+               assert.property(stock, 'price')
+               assert.property(stock, 'rel_likes')  
+             })
+           }
+          done();
+        });   
       });
       
       test('2 stocks with like', function(done) {
-        
+        chai.request(server)
+          .get('/api/stock-prices')
+          .query({stock: ['goog','msft'], like:'true'})
+          .end(function(err, res){
+             if (err) assert.fail(err)
+             else{
+               assert.property(res.body, 'stockData')
+               assert.isArray(res.body.stockData)
+               res.body.stockData.forEach( stock =>{
+                 assert.property(stock, 'stock')
+                 assert.property(stock, 'price')
+                 assert.property(stock, 'rel_likes')  
+               })
+             }
+            done();
+          });   
       });
       
     });
